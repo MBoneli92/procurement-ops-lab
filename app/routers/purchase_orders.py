@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
+from app.auth import RequireAdmin, RequireViewer
 from app.models import POStatus, PurchaseOrder, PurchaseOrderCreate
 from app.store import Store, StoreDep
 
@@ -22,12 +23,17 @@ def _get_order(order_id: int, store: Store) -> PurchaseOrder:
     return order
 
 
-@router.get("", response_model=list[PurchaseOrder])
+@router.get("", response_model=list[PurchaseOrder], dependencies=[RequireViewer])
 def list_orders(store: StoreDep):
     return list(store.orders.values())
 
 
-@router.post("", response_model=PurchaseOrder, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=PurchaseOrder,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[RequireAdmin],
+)
 def create_order(data: PurchaseOrderCreate, store: StoreDep):
     supplier = store.suppliers.get(data.supplier_id)
     if not supplier:
@@ -37,12 +43,12 @@ def create_order(data: PurchaseOrderCreate, store: StoreDep):
     return store.add_order(data)
 
 
-@router.get("/{order_id}", response_model=PurchaseOrder)
+@router.get("/{order_id}", response_model=PurchaseOrder, dependencies=[RequireViewer])
 def get_order(order_id: int, store: StoreDep):
     return _get_order(order_id, store)
 
 
-@router.post("/{order_id}/{action}", response_model=PurchaseOrder)
+@router.post("/{order_id}/{action}", response_model=PurchaseOrder, dependencies=[RequireAdmin])
 def change_status(order_id: int, action: str, store: StoreDep):
     target = ACTIONS.get(action)
     if not target:

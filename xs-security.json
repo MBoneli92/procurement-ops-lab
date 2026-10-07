@@ -1,0 +1,34 @@
+{
+  "xsappname": "procurement-ops-lab",
+  "tenant-mode": "dedicated",
+  "description": "Security profile for procurement-ops-lab",
+  "scopes": [
+    { "name": "$XSAPPNAME.Viewer", "description": "Read suppliers and purchase orders" },
+    { "name": "$XSAPPNAME.Admin", "description": "Create and change suppliers and purchase orders" }
+  ],
+  "role-templates": [
+    {
+      "name": "Viewer",
+      "description": "Read-only access",
+      "scope-references": ["$XSAPPNAME.Viewer"]
+    },
+    {
+      "name": "Admin",
+      "description": "Full access",
+      "scope-references": ["$XSAPPNAME.Viewer", "$XSAPPNAME.Admin"]
+    }
+  ],
+  "role-collections": [
+    {
+      "name": "ProcurementViewer",
+      "description": "Procurement lab read-only",
+      "role-template-references": ["$XSAPPNAME.Viewer"]
+    },
+    {
+      "name": "ProcurementAdmin",
+      "description": "Procurement lab full access",
+      "role-template-references": ["$XSAPPNAME.Admin"]
+    }
+  ],
+  "authorities": ["$XSAPPNAME.Viewer"]
+}

@@ -1,6 +1,6 @@
 _schema-version: "3.1"
 ID: procurement-ops-lab
-version: 0.1.0
+version: 0.2.0
 description: Procurement service for SAP BTP DevOps lab
 
 modules:
@@ -14,6 +14,8 @@ modules:
       command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
       health-check-type: http
       health-check-http-endpoint: /health
+    requires:
+      - name: procurement-xsuaa
     build-parameters:
       builder: custom
       commands: []
@@ -26,3 +28,11 @@ modules:
         - ".ruff_cache/"
         - "*.pdf"
         - "LEARNING_LOG.md"
+
+resources:
+  - name: procurement-xsuaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
