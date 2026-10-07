@@ -1,0 +1,28 @@
+_schema-version: "3.1"
+ID: procurement-ops-lab
+version: 0.1.0
+description: Procurement service for SAP BTP DevOps lab
+
+modules:
+  - name: procurement-api
+    type: python
+    path: .
+    parameters:
+      memory: 256M
+      disk-quota: 512M
+      buildpack: python_buildpack
+      command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+      health-check-type: http
+      health-check-http-endpoint: /health
+    build-parameters:
+      builder: custom
+      commands: []
+      ignore:
+        - ".venv/"
+        - ".git/"
+        - "tests/"
+        - "mta_archives/"
+        - ".pytest_cache/"
+        - ".ruff_cache/"
+        - "*.pdf"
+        - "LEARNING_LOG.md"
