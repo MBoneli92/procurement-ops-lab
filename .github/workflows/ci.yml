@@ -18,7 +18,7 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.12" # mesma versao do runtime.txt (paridade com o Cloud Foundry)
-  COVERAGE_MIN: 90
+  COVERAGE_MIN: 97
 
 jobs:
   test:
