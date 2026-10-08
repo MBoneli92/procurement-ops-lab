@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Um push novo na mesma branch cancela a execucao anterior que ainda estiver rodando
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Menor privilegio: o CI so precisa ler o codigo
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12" # mesma versao do runtime.txt (paridade com o Cloud Foundry)
+  COVERAGE_MIN: 90
+
+jobs:
+  test:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (ruff check)
+        run: ruff check --output-format=github .
+
+      - name: Format (ruff format --check)
+        run: ruff format --check .
+
+      - name: Test with coverage
+        run: >
+          pytest
+          --cov=app
+          --cov-report=term-missing
+          --cov-report=xml
+          --cov-fail-under=${{ env.COVERAGE_MIN }}
+          --junitxml=test-results.xml
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "## Test coverage" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          coverage report >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-reports
+          path: |
+            test-results.xml
+            coverage.xml
+          retention-days: 7
+
+  build:
+    name: Build MTA archive
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install MTA Build Tool
+        run: npm install -g mbt@1.2
+
+      - name: Build .mtar
+        run: mbt build --mtar "procurement-ops-lab_${GITHUB_SHA::7}.mtar"
+
+      - name: Upload .mtar
+        uses: actions/upload-artifact@v6
+        with:
+          name: mtar-${{ github.sha }}
+          path: mta_archives/*.mtar
+          if-no-files-found: error
+          retention-days: 14
