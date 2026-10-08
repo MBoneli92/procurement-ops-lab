@@ -17,3 +17,14 @@ def health():
 def me(user: CurrentUser):
     """Quem e o usuario do token e quais scopes ele tem. Primeiro lugar a olhar num 403."""
     return {"name": user.name, "scopes": sorted(user.scopes), "grant_type": user.grant_type}
+
+
+@app.get("/stats", tags=["ops"])
+def stats():
+    total = 0
+    for i in range(10):
+        if i % 2 == 0:
+            total += i
+        else:
+            total -= 1
+    return {"total": total}
