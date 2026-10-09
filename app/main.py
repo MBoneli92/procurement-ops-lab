@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from app.auth import CurrentUser
 from app.routers import purchase_orders, suppliers
 
-app = FastAPI(title="procurement-ops-lab", version="0.1.0")
+app = FastAPI(title="procurement-ops-lab", version="0.2.1")
 app.include_router(suppliers.router)
 app.include_router(purchase_orders.router)
 
