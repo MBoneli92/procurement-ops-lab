@@ -82,3 +82,110 @@ Descritor	                        manifest.yml	            mta.yaml / mtad.yaml
 Serviços(XSUAA, Destination)        Criados e vinculados à mão	Declarados no pacote e criados no deploy
 Transporte via Cloud TMS	        Não	                        Sim
 Uso típico	                        Teste rápido, protótipo	    Entrega em landscape SAP
+
+
+XSUAA
+
+XSUAA stands for Extended Services for User Account and Authentication. It is the central authentication and authorization service in SAP Business Technology Platform (SAP BTP) (formally part of Cloud Foundry, Kyma, and Neo environments).
+
+What XSUAA Does
+
+• Authentication: Verifies user identity using OAuth 2.0 and JSON Web Tokens (JWT).
+• Authorization: Checks user permissions (scopes and roles) to decide if an action is allowed.
+• No User Storage: XSUAA does not store real user master data. It delegates user management to trusted external Identity Providers (IdPs) such as the SAP ID Service or SAP Cloud Identity Services (IAS).
+• Multi-Tenancy: Extends open-source Cloud Foundry UAA with enterprise features to support multi-tenant SaaS applications.
+
+Core Architecture & Workflow
+
+1. App Router: A single-entry-point Node.js component (xs-app.json) receives user requests and routes them to your backend microservices.
+2. Token Issuance: The user logs in via the external IdP; XSUAA validates the credentials and issues a JWT access token.
+3. Propagation: The App Router forwards the JWT token to downstream applications or CAP/Node.js services.
+4. Enforcement: Microservices inspect the scopes inside the JWT token to allow or deny API operations.
+
+Typical Security Configuration (xs-security.json)
+
+When building an application (such as a CAP or Node.js app), you define your security model in an xs-security.json file:
+• xsappname: Unique name for your application security domain.
+• scopes: Technical permissions (e.g., $XSAPPNAME.Admin).
+• role-templates: Groupings of scopes into logical developer-defined templates.
+• role-collections: Business-facing collections assigned to users in the SAP BTP Cockpit.
+
+Parte 1: o modelo mental (20 min)
+Peça	        O que é	                                                                        Onde vive
+Scope	        Permissão atômica que o código checa (Viewer, Admin)	                     xs-security.json
+Role template	Agrupa scopes; é o "papel" definido pelo desenvolvedor	                     xs-security.json
+Role collection	Agrupa roles; é o que o administrador atribui a pessoas	                     xs-security.json       ou     cockpit
+Instância XSUAA	O servidor OAuth do seu app, criado a partir do xs-security.json	         Service instance no space
+Binding	        Liga a instância ao app e injeta as credenciais em VCAP_SERVICES	         requires no mta.yaml
+Token JWT	    Prova de identidade com os scopes dentro; o app valida a assinatura com sap-xssec	Header Authorization: Bearer ...
+
+
+
+export CLIENTID='sb-procurement-ops-lab!t723779'
+export CLIENTSECRET='f73ce68d-f2bf-42d9-a52d-9fdbf3635f86$RqVHlSVcjhZOOxmHrjRa81oLYa1cAuONyC0c3rmSIMo='
+export UAA_URL='https://27485d6atrial.authentication.us10.hana.ondemand.com'
+export API='https://27485d6atrial-dev-procurement-api.cfapps.us10-001.hana.ondemand.com'
+
+TOKEN=$(curl -s -u "$CLIENTID:$CLIENTSECRET" "$UAA_URL/oauth/token" \
+  -d grant_type=client_credentials | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+curl -s -H "Authorization: Bearer $TOKEN" $API/me
+curl -s -H "Authorization: Bearer $TOKEN" $API/suppliers
+curl -s -i -H "Authorization: Bearer $TOKEN" -X POST $API/suppliers \
+  -H "Content-Type: application/json" -d '{"name":"Acme","country":"BR"}'
+
+
+UTOKEN=$(curl -s -u "$CLIENTID:$CLIENTSECRET" "$UAA_URL/oauth/token" \
+  -d grant_type=password -d username='matheusboneli@hotmail.com' --data-urlencode "password=$PASS" \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+curl -s -H "Authorization: Bearer $UTOKEN" $API/me
+
+  
+  ___________
+  ## START BTP
+
+  cf start procurement-api
+cf app procurement-api
+curl https://27485d6atrial-dev-procurement-api.cfapps.us10-001.hana.ondemand.com/health
+
+
+Quando der problema de credentials =
+Agora é outro token: o da sua sessão no cf CLI, que também é um JWT com validade e expirou. Faz login de novo:
+
+bash
+cf login
+
+Ele lembra o endpoint da API; pede e-mail e senha, e se perguntar org e space, escolhe 27485d6atrial e dev. Se não lembrar o endpoint:
+
+bash
+cf login -a https://api.cf.us10-001.hana.ondemand.com
+
+Depois segue de onde parou:
+
+bash
+cf service-key procurement-xsuaa lab-key
+export CLIENTSECRET='cole-o-novo-aqui'
+UTOKEN=$(gettoken)
+
+Repara que hoje você esbarrou em três credenciais diferentes, cada uma com seu ciclo de vida: o secret da service key (morre quando a key é apagada), o token de usuário do XSUAA (expira em horas, é uma fotografia das roles) e o token do cf CLI (expira, e o cf login renova). Saber qual delas falhou é metade do diagnóstico, e a mensagem de erro sempre diz: invalid_client é a key; 401 no app é o token do XSUAA; “Please log back in” é o CLI.
+
+Para pensar: o problema dos dois pipelines independentes
+
+O GitHub Actions roda os testes. O CI/CD service faz o deploy. Nada liga um ao outro. Se você der push num código com um teste quebrado, o GitHub Actions fica vermelho, e mesmo assim o CI/CD service faz o deploy do código quebrado em dev.
+
+Em dev isso é tolerável; em produção, seria um incidente. As soluções possíveis são:
+
+Proteger a main, para só entrar código que passou no CI. Você faz isso no domingo.
+Ter um único pipeline com testes e deploy em sequência (o CD do GitHub Actions de amanhã).
+Rodar os testes dentro do próprio CI/CD service, usando a configuração por arquivo (.pipeline/config.yml), que dá mais flexibilidade (22/10).
+
+É assim que se investiga “fiz push e o build não disparou”: primeiro olha o Recent Deliveries no lado de quem envia. Se a entrega nem saiu, é configuração do webhook no GitHub (evento errado, webhook inativo). Se saiu e voltou com erro, a resposta diz o motivo (secret, URL). Se voltou 2xx e mesmo assim não houve build, o problema está no serviço (branch diferente da do job, job desligado).
+
+## 09/10 - Dia 5: SAP CI/CD service
+- Fiz: subscription + role collections; credenciais github, cf e webhook; job com Build e Release; deploy disparado por push (0.2.1)
+- Quebrou: webhook com secret errado (Recent Deliveries com erro, nenhum build); space inexistente (Release falhou, Build passou)
+- Resolvi assim: Recent Deliveries para webhook; log da etapa para deploy
+- Aprendi: GitHub Actions e CI/CD service não se conversam; deploy acontece mesmo com teste vermelho
+- Limitação: CI/CD service não roda pytest no modelo de CAP; deploy usa minha conta pessoal (sem usuário técnico no trial)
+- Duvida aberta:
+- Parei em:
+- Proximo passo: GitHub Actions (CD) + Destination (10/10)
