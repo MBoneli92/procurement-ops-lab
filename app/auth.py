@@ -53,7 +53,7 @@ def get_current_user(authorization: Annotated[str | None, Header()] = None) -> U
         log.error("No xsuaa binding found in VCAP_SERVICES")
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Auth service not bound")
 
-    from sap import xssec  
+    from sap import xssec
 
     token = authorization.split(" ", 1)[1]
     try:
