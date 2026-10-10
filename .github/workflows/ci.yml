@@ -7,17 +7,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Um push novo na mesma branch cancela a execucao anterior que ainda estiver rodando
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Menor privilegio: o CI so precisa ler o codigo
 permissions:
   contents: read
 
 env:
-  PYTHON_VERSION: "3.12" # mesma versao do runtime.txt (paridade com o Cloud Foundry)
+  PYTHON_VERSION: "3.12"
   COVERAGE_MIN: 90
 
 jobs:

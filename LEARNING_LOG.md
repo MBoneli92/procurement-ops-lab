@@ -126,3 +126,22 @@ Daily record of building **procurement-ops-lab**: what I built, what broke, how 
 - **Trial limitations:** the CAP template does not run pytest, and deployments use my personal user; a real landscape would use a dedicated technical user.
 
 **Next:** continuous deployment from GitHub Actions with an approval gate, and the Destination service.
+
+## Day 6 · Oct 10 · Continuous deployment + Destination service
+
+**Built**
+- `deploy-dev` job in GitHub Actions: downloads the tested `.mtar`, logs in with repository secrets, runs `cf deploy` and a smoke test that checks the version in `/health`.
+- Currency conversion endpoint that resolves the exchange-rate API URL through the `fx-rates` destination at request time.
+- Turned off the SAP CI/CD service job to avoid two pipelines deploying the same MTA.
+
+**Broke on purpose**
+- Destination with a non-existent host: `502 unreachable (ConnectError)`; Check Connection failed.
+- Right host, wrong path: `502 HTTP 404`; Check Connection did not catch it.
+- Renamed destination: `502 not found in the subaccount`.
+- Failing test pushed to `main`: build and deploy skipped, `dev` untouched.
+
+**Takeaways**
+- Destinations move integration endpoints out of the code: a cockpit change fixes (or breaks) an integration without a deploy.
+- Check Connection only proves the host answers; always call the real endpoint after a change.
+- With tests and deployment in one pipeline, a red test stops the release. Yesterday's gap is closed.
+- GitHub environments with approvals are not available for private repos on the free plan; the approval gate waits until the repo is public.

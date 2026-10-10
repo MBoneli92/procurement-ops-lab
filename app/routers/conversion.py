@@ -32,7 +32,6 @@ def converted_total(
             raise HTTPException(exc.status_code, str(exc)) from exc
         rate, rate_date, source = fx.rate, fx.date, f"destination:{fx.source}"
 
-    # Valores monetarios como texto, igual ao total do pedido: float perde precisao
     return {
         "order_id": order.id,
         "original_currency": order.currency,

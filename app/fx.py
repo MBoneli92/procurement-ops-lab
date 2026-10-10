@@ -35,7 +35,7 @@ def get_rate(client: httpx.Client, base: str, quote: str) -> FxRate:
         ) from exc
 
     if response.status_code == 422:
-        # A API externa nao conhece a moeda: e erro do pedido, nao da integracao
+        
         raise DestinationError(f"Currency not supported: {quote}", status_code=422)
     if response.status_code != 200:
         log.warning(

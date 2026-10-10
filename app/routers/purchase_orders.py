@@ -6,7 +6,6 @@ from app.store import Store, StoreDep
 
 router = APIRouter(prefix="/purchase-orders", tags=["purchase-orders"])
 
-# Transicoes permitidas: estado atual -> estados de destino
 TRANSITIONS: dict[POStatus, set[POStatus]] = {
     POStatus.DRAFT: {POStatus.SUBMITTED},
     POStatus.SUBMITTED: {POStatus.APPROVED, POStatus.REJECTED},

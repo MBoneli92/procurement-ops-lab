@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from app.auth import CurrentUser
 from app.routers import conversion, purchase_orders, suppliers
 
-# INFO para os logs da aplicacao aparecerem no cf logs
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 app = FastAPI(title="procurement-ops-lab", version="0.3.0")
