@@ -1,6 +1,6 @@
 _schema-version: "3.1"
 ID: procurement-ops-lab
-version: 0.2.1
+version: 0.3.0
 description: Procurement service for SAP BTP DevOps lab
 
 modules:
@@ -16,6 +16,7 @@ modules:
       health-check-http-endpoint: /health
     requires:
       - name: procurement-xsuaa
+      - name: procurement-destination
     build-parameters:
       builder: custom
       commands: []
@@ -23,10 +24,12 @@ modules:
         - ".venv/"
         - ".git/"
         - "tests/"
+        - "docs/"
         - "mta_archives/"
         - ".pytest_cache/"
         - ".ruff_cache/"
         - "*.pdf"
+        - "*.local.md"
         - "LEARNING_LOG.md"
 
 resources:
@@ -36,3 +39,9 @@ resources:
       service: xsuaa
       service-plan: application
       path: ./xs-security.json
+
+  - name: procurement-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite

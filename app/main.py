@@ -1,11 +1,17 @@
+import logging
+
 from fastapi import FastAPI
 
 from app.auth import CurrentUser
-from app.routers import purchase_orders, suppliers
+from app.routers import conversion, purchase_orders, suppliers
 
-app = FastAPI(title="procurement-ops-lab", version="0.2.1")
+# INFO para os logs da aplicacao aparecerem no cf logs
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+app = FastAPI(title="procurement-ops-lab", version="0.3.0")
 app.include_router(suppliers.router)
 app.include_router(purchase_orders.router)
+app.include_router(conversion.router)
 
 
 @app.get("/health", tags=["ops"])

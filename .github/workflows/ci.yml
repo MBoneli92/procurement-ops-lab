@@ -99,3 +99,73 @@ jobs:
           path: mta_archives/*.mtar
           if-no-files-found: error
           retention-days: 14
+
+  deploy-dev:
+    name: Deploy to dev
+    needs: build
+    # So entrega o que chegou na main (push ou disparo manual); pull requests param no build
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: ${{ vars.APP_URL }}/health
+    timeout-minutes: 20
+    # Um deploy por vez no mesmo ambiente; o seguinte espera em vez de cancelar o atual
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    env:
+      CF_API: ${{ vars.CF_API }}
+      CF_ORG: ${{ vars.CF_ORG }}
+      CF_SPACE: ${{ vars.CF_SPACE }}
+      APP_URL: ${{ vars.APP_URL }}
+    steps:
+      - name: Download the .mtar built by this run
+        uses: actions/download-artifact@v7
+        with:
+          name: mtar-${{ github.sha }}
+          path: dist
+
+      - name: Install cf CLI and MultiApps plugin
+        run: |
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+            | sudo gpg --dearmor -o /usr/share/keyrings/cli.cloudfoundry.org.gpg
+          echo "deb [signed-by=/usr/share/keyrings/cli.cloudfoundry.org.gpg] https://packages.cloudfoundry.org/debian stable main" \
+            | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list > /dev/null
+          sudo apt-get update -q
+          sudo apt-get install -y -q cf8-cli
+          cf version
+          cf install-plugin multiapps -f
+
+      - name: Log in to Cloud Foundry
+        env:
+          CF_USERNAME: ${{ secrets.CF_USERNAME }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+        run: |
+          cf api "$CF_API"
+          cf auth
+          cf target -o "$CF_ORG" -s "$CF_SPACE"
+
+      - name: Deploy MTA
+        run: cf deploy dist/*.mtar -f --retries 1
+
+      - name: Smoke test
+        run: |
+          expected=$(unzip -p dist/*.mtar META-INF/mtad.yaml | awk '/^version:/ {print $2; exit}')
+          echo "Expected version: $expected"
+          for attempt in 1 2 3 4 5; do
+            if body=$(curl -fsS "$APP_URL/health"); then break; fi
+            echo "Attempt $attempt failed, retrying in 10s"
+            sleep 10
+          done
+          echo "Response: $body"
+          if ! echo "$body" | grep -q "\"version\":\"$expected\""; then
+            echo "::error::Health check did not report version $expected"
+            exit 1
+          fi
+          {
+            echo "## Deployed to dev"
+            echo "- Version: \`$expected\`"
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+            echo "- URL: $APP_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
