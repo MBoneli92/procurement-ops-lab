@@ -167,3 +167,34 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA::7}\`"
             echo "- URL: $APP_URL"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Send the same .mtar to Cloud TMS (node DEV)
+        shell: bash
+        env:
+          UAA_URL: ${{ secrets.TMS_UAA_URL }}
+          CLIENT_ID: ${{ secrets.TMS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.TMS_CLIENT_SECRET }}
+          TMS_URI: ${{ secrets.TMS_URI }}
+        run: |
+          mtar=$(ls dist/*.mtar)
+          token=$(curl -fsS -u "$CLIENT_ID:$CLIENT_SECRET" "$UAA_URL/oauth/token" \
+            -d grant_type=client_credentials | jq -r .access_token)
+          echo "::add-mask::$token"
+          file_id=$(curl -fsS -H "Authorization: Bearer $token" \
+            -F "file=@$mtar" "$TMS_URI/v2/files/upload" | jq -r .fileId)
+          if [ -z "$file_id" ] || [ "$file_id" = "null" ]; then
+            echo "::error::Cloud TMS did not return a fileId"
+            exit 1
+          fi
+          response=$(curl -fsS -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+            -d "{\"nodeName\":\"DEV\",\"contentType\":\"MTA\",\"storageType\":\"FILE\",\"description\":\"${GITHUB_SHA::7} $(basename "$mtar")\",\"entries\":[{\"uri\":\"$file_id\"}]}" \
+            "$TMS_URI/v2/nodes/upload")
+          echo "TMS response: $response"
+          {
+            echo "## Sent to Cloud TMS"
+            echo "- Node DEV, now waiting in the PROD import queue"
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      
+
