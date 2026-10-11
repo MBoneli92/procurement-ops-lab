@@ -1,0 +1,13 @@
+general:
+  buildTool: mta
+
+steps:
+  mtaBuild:
+    platform: CF
+    mtarName: procurement-ops-lab.mtar
+  cloudFoundryDeploy:
+    deployTool: mtaDeployPlugin
+    apiEndpoint: https://api.cf.us10-001.hana.ondemand.com
+    org: 27485d6atrial
+    space: dev
+    mtaPath: procurement-ops-lab.mtar

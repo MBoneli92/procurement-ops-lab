@@ -2,7 +2,11 @@ pipeline {
   agent any
   options {
     timestamps()
-    timeout(time: 20, unit: 'MINUTES')
+    timeout(time: 30, unit: 'MINUTES')
+    disableConcurrentBuilds()
+  }
+  parameters {
+    booleanParam(name: 'DEPLOY', defaultValue: false, description: 'Deploy to dev with Piper')
   }
   stages {
     stage('Lint and test') {
@@ -18,6 +22,20 @@ pipeline {
       }
       post {
         always { junit 'test-results.xml' }
+      }
+    }
+    stage('Build MTA') {
+      steps {
+        sh 'piper mtaBuild'
+        archiveArtifacts artifacts: '**/*.mtar', fingerprint: true
+      }
+    }
+    stage('Deploy to dev') {
+      when { expression { params.DEPLOY } }
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'cf-dev', usernameVariable: 'CF_USER', passwordVariable: 'CF_PASS')]) {
+          sh 'piper cloudFoundryDeploy --username "$CF_USER" --password "$CF_PASS"'
+        }
       }
     }
   }
