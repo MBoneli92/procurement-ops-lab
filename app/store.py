@@ -1,7 +1,5 @@
 """Armazenamento em memoria. Fica atras desta interface para trocar por SQLite depois."""
 
-import os
-
 from datetime import UTC, datetime
 from itertools import count
 from typing import Annotated
