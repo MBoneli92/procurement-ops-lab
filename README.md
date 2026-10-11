@@ -157,13 +157,13 @@ LEARNING_LOG.md       Daily log: what was built, what broke and how it was fixed
 - [x] GitHub Actions CI with versioned `.mtar` artifact
 - [x] SAP CI/CD service with webhook-triggered deploy to `dev`
 - [x] Manual approval gate with GitHub environments (required reviewer, `main` only, environment-scoped secrets)
-- [ ] Continuous deployment from GitHub Actions with approval gate; Destination service
-- [ ] Branch protection and tagged releases
-- [ ] Customer onboarding automation (Terraform providers for SAP BTP and Cloud Foundry, orchestrated by Python)
-- [ ] Jenkins with Project Piper
-- [ ] Promotion from DEV to PROD with SAP Cloud Transport Management
-- [ ] Structured logging, Alert Notification, scheduled health checks
-- [ ] SAP Integration Suite: cXML purchase order flow (Ariba style) and API Management
-- [ ] Runbook, postmortem and architecture decision records
+- [x] Continuous deployment from GitHub Actions with approval gate; Destination service
+- [x] Branch protection and tagged releases
+- [x] Customer onboarding automation (Terraform providers for SAP BTP and Cloud Foundry, orchestrated by Python)
+- [X] Jenkins with Project Piper
+- [x] Promotion from DEV to PROD with SAP Cloud Transport Management
+- [x] Structured logging, Alert Notification, scheduled health checks
+- [x] SAP Integration Suite: cXML purchase order flow (Ariba style) and API Management
+- [x] Runbook, postmortem and architecture decision records
 
 
