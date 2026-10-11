@@ -1,0 +1,24 @@
+pipeline {
+  agent any
+  options {
+    timestamps()
+    timeout(time: 20, unit: 'MINUTES')
+  }
+  stages {
+    stage('Lint and test') {
+      steps {
+        sh '''
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install -q -r requirements-dev.txt
+          ruff check .
+          ruff format --check .
+          pytest --cov=app --cov-fail-under=90 --junitxml=test-results.xml
+        '''
+      }
+      post {
+        always { junit 'test-results.xml' }
+      }
+    }
+  }
+}
