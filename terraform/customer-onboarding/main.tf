@@ -59,6 +59,7 @@ resource "btp_subaccount_role_collection" "viewer" {
 }
 
 resource "btp_subaccount_role_collection_assignment" "viewer_user" {
+  origin               = "sap.default"
   subaccount_id        = var.subaccount_id
   role_collection_name = btp_subaccount_role_collection.viewer.name
   user_name            = var.admin_user
