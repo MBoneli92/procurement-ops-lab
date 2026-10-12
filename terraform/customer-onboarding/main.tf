@@ -43,6 +43,7 @@ resource "cloudfoundry_service_instance" "xsuaa" {
       "scope-references" = ["$XSAPPNAME.Viewer"]
     }]
   })
+    depends_on = [cloudfoundry_space_role.developer]
 }
 
 resource "btp_subaccount_role_collection" "viewer" {
