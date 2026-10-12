@@ -1,4 +1,10 @@
 terraform {
+cloud {
+    organization = "mboneli-procurement-lab"
+    workspaces {
+      tags = ["procurement-onboarding"]
+    }
+  }
   required_version = ">= 1.6"
   required_providers {
     btp = {
