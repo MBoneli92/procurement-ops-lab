@@ -53,6 +53,7 @@ def test_env_missing_lists_every_gap():
         ("Error: Quota exceeded for service plan", "quota"),
         ("Error: Space with name already exists", "already exists"),
         ("role template 'Viewer' not found", "TF_VAR_xsuaa_app_suffix"),
+        ("Error: No existing workspaces.", "onboarding-bootstrap"),
         ("something unexpected", "full output"),
     ],
 )

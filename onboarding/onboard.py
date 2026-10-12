@@ -29,9 +29,16 @@ REQUIRED_ENV = (
     "TF_VAR_admin_user",
 )
 CREDENTIAL_ENV = (("BTP_USERNAME", "BTP_ENABLE_SSO"), ("CF_USER",))
+# An empty, permanent workspace that lets `terraform init` run before any customer exists.
+BOOTSTRAP_WORKSPACE = os.environ.get("ONBOARDING_BOOTSTRAP_WORKSPACE", "onboarding-bootstrap")
 
 # Known Terraform or platform messages, mapped to an explanation a support engineer can act on.
 KNOWN_ERRORS = (
+    (
+        "no existing workspaces",
+        f"HCP Terraform has no workspace with the onboarding tag. Create the empty workspace "
+        f"'{BOOTSTRAP_WORKSPACE}' with that tag once.",
+    ),
     ("quota", "The subaccount has no quota left for this service. Free quota in Entitlements."),
     (
         "already exists",
@@ -85,10 +92,20 @@ def explain_failure(output: str) -> str:
     return "Terraform failed. The full output is above."
 
 
-def terraform(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+def terraform(
+    *args: str, check: bool = True, workspace: str | None = None
+) -> subprocess.CompletedProcess[str]:
+    """Run terraform in the onboarding folder.
+
+    TF_WORKSPACE overrides `terraform workspace select`, so it is removed from the environment
+    unless a call needs it on purpose (only init does).
+    """
     print(f"\n$ terraform {' '.join(args)}", flush=True)
+    env = {k: v for k, v in os.environ.items() if k != "TF_WORKSPACE"}
+    if workspace:
+        env["TF_WORKSPACE"] = workspace
     result = subprocess.run(
-        ["terraform", *args], cwd=TF_DIR, text=True, capture_output=True, check=False
+        ["terraform", *args], cwd=TF_DIR, env=env, text=True, capture_output=True, check=False
     )
     sys.stdout.write(result.stdout)
     sys.stderr.write(result.stderr)
@@ -119,8 +136,11 @@ def select_workspace(customer: str, create: bool) -> None:
         terraform("workspace", "select", "-or-create", customer)
         return
     result = terraform("workspace", "select", customer, check=False)
-    if result.returncode != 0:
+    if result.returncode == 0:
+        return
+    if "doesn't exist" in (result.stdout + result.stderr).lower():
         raise OnboardingError(f"No onboarding found for '{customer}'. Nothing to remove.")
+    raise OnboardingError(explain_failure(result.stdout + result.stderr))
 
 
 def verify_matches_code(customer: str) -> None:
@@ -142,7 +162,7 @@ def verify_matches_code(customer: str) -> None:
 def onboard(customer: str, action: str, auto_approve: bool) -> None:
     validate_customer(customer)
     check_env()
-    terraform("init", "-input=false", "-no-color")
+    terraform("init", "-input=false", "-no-color", workspace=BOOTSTRAP_WORKSPACE)
     select_workspace(customer, create=action in {"plan", "apply"})
 
     destroying = action in {"plan-destroy", "destroy"}
