@@ -16,3 +16,4 @@ Makefile_*.mta
 *.tfstate.*
 *.tfvars
 crash.log
+tfplan
