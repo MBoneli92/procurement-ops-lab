@@ -67,4 +67,3 @@ def test_invalid_name_never_calls_terraform(monkeypatch):
     monkeypatch.setattr(onboard, "terraform", lambda *a, **k: calls.append(a))
     assert onboard.main(["Bad_Name", "--action", "apply"]) == 1
     assert calls == []
-    
