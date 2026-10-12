@@ -10,3 +10,9 @@ mta_archives/
 .*_mta_build_tmp/
 Makefile_*.mta
 *key*.json
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
