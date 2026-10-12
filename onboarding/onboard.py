@@ -183,7 +183,7 @@ def onboard(customer: str, action: str, auto_approve: bool) -> None:
         remaining = terraform("state", "list").stdout.strip()
         if remaining:
             raise OnboardingError(f"Resources still in state after destroy:\n{remaining}")
-        terraform("workspace", "select", "default")
+        terraform("workspace", "select", BOOTSTRAP_WORKSPACE)
         terraform("workspace", "delete", customer)
         summary([f"## Offboarded `{customer}`", "", "All resources removed, workspace deleted."])
         return
