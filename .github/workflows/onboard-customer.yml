@@ -1,0 +1,90 @@
+name: Onboard customer
+
+on:
+  workflow_dispatch:
+    inputs:
+      customer:
+        description: Customer name (3 to 31 lowercase letters, digits or hyphens)
+        required: true
+        type: string
+      action:
+        description: Onboard (apply) or offboard (destroy)
+        required: true
+        type: choice
+        options: [apply, destroy]
+        default: apply
+
+permissions:
+  contents: read
+
+# One run per customer at a time; a second request waits instead of racing the first
+concurrency:
+  group: onboarding-${{ inputs.customer }}
+  cancel-in-progress: false
+
+env:
+  CUSTOMER: ${{ inputs.customer }}
+  TF_IN_AUTOMATION: "true"
+  TF_VAR_subaccount_id: ${{ vars.SUBACCOUNT_ID }}
+  TF_VAR_xsuaa_app_suffix: ${{ vars.XSUAA_APP_SUFFIX }}
+
+jobs:
+  plan:
+    name: Validate and plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+          terraform_wrapper: false
+
+      - name: Plan
+        env:
+          BTP_USERNAME: ${{ secrets.BTP_USERNAME }}
+          BTP_PASSWORD: ${{ secrets.BTP_PASSWORD }}
+          CF_USER: ${{ secrets.BTP_USERNAME }}
+          CF_PASSWORD: ${{ secrets.BTP_PASSWORD }}
+          TF_VAR_admin_user: ${{ secrets.ADMIN_USER }}
+          PLAN_ACTION: ${{ inputs.action == 'destroy' && 'plan-destroy' || 'plan' }}
+        run: python -m onboarding.onboard "$CUSTOMER" --action "$PLAN_ACTION"
+
+  apply:
+    name: Apply after approval
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: onboarding
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+          terraform_wrapper: false
+
+      - name: Apply
+        env:
+          BTP_USERNAME: ${{ secrets.BTP_USERNAME }}
+          BTP_PASSWORD: ${{ secrets.BTP_PASSWORD }}
+          CF_USER: ${{ secrets.BTP_USERNAME }}
+          CF_PASSWORD: ${{ secrets.BTP_PASSWORD }}
+          TF_VAR_admin_user: ${{ secrets.ADMIN_USER }}
+          ACTION: ${{ inputs.action }}
+        run: python -m onboarding.onboard "$CUSTOMER" --action "$ACTION" --auto-approve
