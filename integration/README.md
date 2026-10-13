@@ -36,7 +36,7 @@ Package `procurement-ops-lab`. The scripts are versioned in `scripts/`; the expo
 | Sender | HTTPS adapter | Address `/ariba/orders`, Authorization `User Role`, role `ESBMessaging.send`, CSRF Protected off |
 | Map cXML to JSON | Groovy Script | `scripts/cxml_to_purchase_order.groovy` |
 | Call procurement-api | Request Reply + HTTP receiver | Address `https://<dev route>/purchase-orders`, Method `POST`, Authentication `OAuth2 Client Credentials`, Credential Name `procurement-api-oauth`, Request Headers `Content-Type`, Throw Exception on Failure on |
-| Build cXML Response | Groovy Script | `scripts/purchase_order_to_cxml_response.groovy` |
+| Build cXML Response | Groovy Script | `scripts/purchase_order_to_cxml_response.groovy` (also forces HTTP 200, since cXML expects 200 even when the API answers 201) |
 
 Field mapping:
 
@@ -49,6 +49,15 @@ Field mapping:
 | `ItemOut/ItemDetail/UnitPrice/Money` | `items[].unit_price` |
 
 In a real landscape the supplier would come from the Ariba Network ID in `Header/To` and be translated with a Value Mapping. The lab passes the API's supplier id in an `Extrinsic`, which is the cXML element for custom fields.
+
+## Script checks
+
+The Cloud Integration script editor flags two patterns as "High", and both scripts follow the fix it asks for:
+
+- XML parsing with DOCTYPE allowed (XXE risk): script 1 removes the standard cXML DOCTYPE and parses with `disallow-doctype-decl`.
+- JSON parsing without streaming: script 2 reads the body as `java.io.Reader`.
+
+`messageLogFactory` does not exist in the iFlow simulation, so the custom header calls sit in a `try/catch`.
 
 ## Samples
 

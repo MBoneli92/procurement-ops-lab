@@ -161,6 +161,11 @@ Known failure modes of procurement-ops-lab: how they show up, where to look and 
 | `ariba_sim.py`: HTTP 404 | Wrong path, or the iFlow is not deployed | Endpoint is `<url>/http/ariba/orders`; check **Manage Integration Content** shows `Started` |
 | Monitor: script error `cXML OrderRequest needs ...` | Payload without `orderID` or numeric `SupplierID` | Fix the sender; the mapping rejects it on purpose |
 | Monitor: `SAXParseException` in script 1 | Malformed XML | The sender must send well-formed cXML |
+| Monitor: `DOCTYPE is disallowed` in script 1 | The payload declares its own DOCTYPE or entities (possible XXE attempt) | Rejected on purpose; only the standard cXML DOCTYPE is accepted |
 | Monitor: HTTP 401 from the receiver | Security Material `procurement-api-oauth` has a wrong secret or token URL | Update the credential, then **Deploy** it |
 | Monitor: HTTP 403 `Missing scope: one of Admin, OrderIntake` | `OrderIntake` not in the token: `xs-security.json` not deployed yet, or a key from another XSUAA instance | Deploy the app, then create a new token (tokens keep the scopes they were issued with) |
 | Monitor: HTTP 422 `Supplier does not exist` | The app restarted and lost its in-memory data, or a wrong `SupplierID` | Create the supplier again with an Admin token |
+| `ariba_sim.py`: HTTP 201 instead of 200, order created | The iFlow passed the API's `201 Created` back to the sender; cXML expects 200 | Script 2 sets `CamelHttpResponseCode` to 200. After a redeploy, check **Deployed On** before testing: messages sent earlier still ran on the old version |
+| `cf logs --recent` shows no `purchase order created` line | The recent buffer is small and older lines were pushed out | Tail live with `cf logs procurement-api` while sending a new order; for history, a logging service is needed |
+
+**Reproduced:** supplier 999 (Monitor `Failed`, HTTP 422 from the receiver), `--malformed` (Monitor `Failed` in script 1), and the 201 reply code before the script 2 fix.
