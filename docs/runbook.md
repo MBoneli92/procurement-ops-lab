@@ -112,3 +112,32 @@ Known failure modes of procurement-ops-lab: how they show up, where to look and 
 **Fix:** correct the URL in the destination. No restart or redeploy is needed: the app reads the destination on every call.
 
 **Prevention:** after any destination change, run Check Connection **and** call the endpoint that uses it; Check Connection alone does not catch a wrong path.
+
+---
+
+## RB-006: HealthCheckFailed alert
+
+**Symptom:** an email from SAP Alert Notification with subject `<target> is down`, and a red run of the **Health check** workflow in GitHub Actions.
+
+**Where to look**
+1. The email body: which URL failed and why (`HTTP 503`, `HTTP 404`, timeout). The `run_url` tag links to the workflow run.
+2. GitHub > Actions > **Health check** > the run > **Summary**: one row per target, UP or DOWN, with the detail.
+3. `cf app procurement-api` in the target space: `requested state` and the instance state.
+4. `cf logs procurement-api --recent`: JSON lines from `procurement.access`; filter by `request_id` to follow one request.
+
+| Detail in the alert | Likely cause | First action |
+|---|---|---|
+| `HTTP 404` with `Requested route ... does not exist` | App stopped or route removed | `cf app procurement-api`; `cf start procurement-api` if it was stopped |
+| `HTTP 502` or `HTTP 503` | App crashing or starting | `cf events procurement-api`, then RB-001 |
+| `HTTP 0 ... timed out` | Platform or network problem | Check SAP Trust Center status; retry the workflow |
+| `HTTP 200 but body=...` | App up but reporting unhealthy | Read the body, then the app logs |
+
+**Root cause (reproduced):** `cf stop procurement-api` in space `dev`. The next run marked `procurement-api-dev` DOWN after 3 attempts and the email arrived. `cf start` turned the next run green.
+
+**Fix:** depends on the row above. After the fix, run the workflow manually (**Run workflow**) to confirm it is green.
+
+**Prevention and tuning**
+- 3 attempts 5 seconds apart before alerting, so one slow answer is not an incident.
+- The workflow alerts on every failed run. If the alert repeats while you work on it, use **Snooze by** on the subscription in Alert Notification.
+- In a trial account the platform can stop apps by itself; an alert after that is the check doing its job, not a false alarm.
+- The service key `github-actions` is long-lived. Rotate it by creating a new key, updating the three `ALERT_*` secrets, then deleting the old key.

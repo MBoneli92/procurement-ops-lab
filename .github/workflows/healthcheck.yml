@@ -1,0 +1,40 @@
+name: Health check
+
+# Synthetic monitoring: from outside BTP, call /health of every deployment on a schedule.
+# A failed target raises a HealthCheckFailed event in SAP Alert Notification (email).
+on:
+  schedule:
+    # Every 30 minutes, 11:00-23:59 UTC (08:00-20:59 in Brasilia), Monday to Friday.
+    # GitHub may start scheduled runs a few minutes late; that is expected.
+    - cron: "*/30 11-23 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: healthcheck
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check /health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Check targets
+        env:
+          HEALTH_TARGETS: ${{ vars.HEALTH_TARGETS }}
+          ALERT_URL: ${{ secrets.ALERT_URL }}
+          ALERT_CLIENT_ID: ${{ secrets.ALERT_CLIENT_ID }}
+          ALERT_CLIENT_SECRET: ${{ secrets.ALERT_CLIENT_SECRET }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python -m ops.healthcheck
