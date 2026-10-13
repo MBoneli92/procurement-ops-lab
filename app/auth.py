@@ -15,7 +15,7 @@ from fastapi import Depends, Header, HTTPException, status
 
 log = logging.getLogger(__name__)
 
-KNOWN_SCOPES = ("Viewer", "Admin")
+KNOWN_SCOPES = ("Viewer", "Admin", "OrderIntake")
 
 
 @dataclass(frozen=True)
@@ -39,7 +39,7 @@ def get_uaa_credentials() -> dict | None:
 def get_current_user(authorization: Annotated[str | None, Header()] = None) -> User:
     # Modo local: sem BTP, usuario fake com todos os scopes. Nunca ligar no Cloud Foundry.
     if os.environ.get("AUTH_MODE") == "local":
-        return User(name="local-dev", scopes=frozenset(KNOWN_SCOPES), grant_type="local")
+        return User(name="local-dev", scopes=frozenset({"Viewer", "Admin"}), grant_type="local")
 
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(
@@ -83,5 +83,21 @@ def require_scope(scope: str):
     return Depends(checker)
 
 
+def require_any_scope(*scopes: str):
+    """Pass when the caller has at least one of the scopes."""
+
+    def checker(user: CurrentUser) -> User:
+        if not user.scopes.intersection(scopes):
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, f"Missing scope: one of {', '.join(scopes)}"
+            )
+        return user
+
+    return Depends(checker)
+
+
 RequireViewer = require_scope("Viewer")
 RequireAdmin = require_scope("Admin")
+# Humans create orders with Admin; an integration (technical client) only gets OrderIntake,
+# so it can create orders but cannot approve them or touch suppliers.
+RequireOrderCreate = require_any_scope("Admin", "OrderIntake")

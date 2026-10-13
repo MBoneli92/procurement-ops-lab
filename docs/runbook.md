@@ -141,3 +141,26 @@ Known failure modes of procurement-ops-lab: how they show up, where to look and 
 - The workflow alerts on every failed run. If the alert repeats while you work on it, use **Snooze by** on the subscription in Alert Notification.
 - In a trial account the platform can stop apps by itself; an alert after that is the check doing its job, not a false alarm.
 - The service key `github-actions` is long-lived. Rotate it by creating a new key, updating the three `ALERT_*` secrets, then deleting the old key.
+
+---
+
+## RB-007: Ariba order did not become a purchase order
+
+**Symptom:** `ariba_sim.py` prints an HTTP error instead of `HTTP 200` with a cXML `Status code="200"`, or the order is missing from `GET /purchase-orders`.
+
+**Where to look, in this order**
+1. What the sender got: the HTTP code and body printed by `ariba_sim.py`.
+2. Integration Suite > **Monitor** > **Integrations and APIs** > **Monitor Message Processing**: filter by the custom header `AribaOrderID`. Status `Failed` shows the error of the step that broke.
+3. With log level `Trace` on the iFlow (lasts 10 minutes), **Message Content** shows the payload before and after each step.
+4. `cf logs procurement-api --recent`: the JSON line `purchase order created` with `order_id`, or the `procurement.access` line with the 4xx status.
+
+| What you see | Meaning | Fix |
+|---|---|---|
+| `ariba_sim.py`: HTTP 401 | Wrong or missing credentials of the `ariba-sim` key | Copy `clientid`, `clientsecret` and `tokenurl` again from the key |
+| `ariba_sim.py`: HTTP 403 | The key's instance lacks role `ESBMessaging.send`, or the sender adapter expects another role | Recreate the instance with the role, or fix the adapter |
+| `ariba_sim.py`: HTTP 404 | Wrong path, or the iFlow is not deployed | Endpoint is `<url>/http/ariba/orders`; check **Manage Integration Content** shows `Started` |
+| Monitor: script error `cXML OrderRequest needs ...` | Payload without `orderID` or numeric `SupplierID` | Fix the sender; the mapping rejects it on purpose |
+| Monitor: `SAXParseException` in script 1 | Malformed XML | The sender must send well-formed cXML |
+| Monitor: HTTP 401 from the receiver | Security Material `procurement-api-oauth` has a wrong secret or token URL | Update the credential, then **Deploy** it |
+| Monitor: HTTP 403 `Missing scope: one of Admin, OrderIntake` | `OrderIntake` not in the token: `xs-security.json` not deployed yet, or a key from another XSUAA instance | Deploy the app, then create a new token (tokens keep the scopes they were issued with) |
+| Monitor: HTTP 422 `Supplier does not exist` | The app restarted and lost its in-memory data, or a wrong `SupplierID` | Create the supplier again with an Admin token |

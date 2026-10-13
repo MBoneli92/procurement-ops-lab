@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.060/cXML.dtd">
+<cXML payloadID="sample-0001@ariba-sim.procurement-ops-lab" timestamp="2026-10-13T12:00:00+00:00" xml:lang="en-US">
+  <Header>
+    <From><Credential domain="NetworkID"><Identity>AN-BUYER-LAB</Identity></Credential></From>
+    <To>
+      <Credential domain="NetworkID">
+        <Identity>AN-SUPPLIER-1</Identity>
+      </Credential>
+    </To>
+    <Sender>
+      <Credential domain="NetworkID"><Identity>AN-BUYER-LAB</Identity></Credential>
+      <UserAgent>procurement-ops-lab ariba_sim</UserAgent>
+    </Sender>
+  </Header>
+  <Request deploymentMode="test">
+    <OrderRequest>
+      <OrderRequestHeader orderID="PO-SAMPLE-0001" orderDate="2026-10-13T12:00:00+00:00" type="new">
+        <Total><Money currency="USD">349.80</Money></Total>
+        <Extrinsic name="SupplierID">1</Extrinsic>
+      </OrderRequestHeader>
+      <ItemOut quantity="10" lineNumber="1">
+        <ItemID><SupplierPartID>MAT-001</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">15.00</Money></UnitPrice>
+          <Description xml:lang="en">MAT-001</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+      <ItemOut quantity="2" lineNumber="2">
+        <ItemID><SupplierPartID>MAT-002</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">99.90</Money></UnitPrice>
+          <Description xml:lang="en">MAT-002</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+    </OrderRequest>
+  </Request>
+</cXML>
