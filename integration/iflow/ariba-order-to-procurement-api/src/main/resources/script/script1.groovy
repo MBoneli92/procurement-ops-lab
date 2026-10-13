@@ -22,12 +22,13 @@ import org.w3c.dom.NodeList
 def Message processData(Message message) {
     String body = message.getBody(String)
 
-    // cXML always carries a DOCTYPE. Accept it, but never download the DTD and never resolve
-    // external entities: a payload from outside must not make the tenant open URLs (XXE).
+    // cXML starts with a DOCTYPE that only points to the public cXML DTD. Remove exactly that
+    // line, then parse with DOCTYPE declarations forbidden: a payload from outside can never
+    // declare its own entities (XXE). A DOCTYPE with anything else in it is rejected.
+    body = body.replaceFirst(/<!DOCTYPE\s+cXML\s+SYSTEM\s+"[^"]*"\s*>/, "")
     def factory = DocumentBuilderFactory.newInstance()
-    factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-    factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
-    factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+    factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+    factory.setXIncludeAware(false)
     factory.setExpandEntityReferences(false)
     def doc = factory.newDocumentBuilder().parse(new ByteArrayInputStream(body.getBytes("UTF-8")))
     def xpath = XPathFactory.newInstance().newXPath()
@@ -61,11 +62,11 @@ def Message processData(Message message) {
     // Kept for the reply step and for searching in Monitor Message Processing.
     message.setProperty("AribaOrderID", orderId)
     message.setProperty("AribaPayloadID", payloadId)
-    def messageLog = messageLogFactory.getMessageLog(message)
-    if (messageLog != null) {
-        messageLog.addCustomHeaderProperty("AribaOrderID", orderId)
+    // The iFlow simulation has no message log, so the variable does not exist there.
+    try {
+        messageLogFactory.getMessageLog(message)?.addCustomHeaderProperty("AribaOrderID", orderId)
+    } catch (MissingPropertyException ignored) {
     }
-
     message.setHeader("Content-Type", "application/json")
     message.setBody(JsonOutput.toJson([
         supplier_id: supplierId as Integer,
