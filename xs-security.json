@@ -4,7 +4,11 @@
   "description": "Security profile for procurement-ops-lab",
   "scopes": [
     { "name": "$XSAPPNAME.Viewer", "description": "Read suppliers and purchase orders" },
-    { "name": "$XSAPPNAME.Admin", "description": "Create and change suppliers and purchase orders" }
+    { "name": "$XSAPPNAME.Admin", "description": "Create and change suppliers and purchase orders" },
+    {
+      "name": "$XSAPPNAME.OrderIntake",
+      "description": "Create purchase orders only; for technical clients such as Integration Suite"
+    }
   ],
   "role-templates": [
     {
@@ -30,5 +34,5 @@
       "role-template-references": ["$XSAPPNAME.Admin"]
     }
   ],
-  "authorities": ["$XSAPPNAME.Viewer"]
+  "authorities": ["$XSAPPNAME.Viewer", "$XSAPPNAME.OrderIntake"]
 }

@@ -1,10 +1,13 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, status
 
-from app.auth import RequireAdmin, RequireViewer
+from app.auth import RequireAdmin, RequireOrderCreate, RequireViewer, User
 from app.models import POStatus, PurchaseOrder, PurchaseOrderCreate
 from app.store import Store, StoreDep
 
 router = APIRouter(prefix="/purchase-orders", tags=["purchase-orders"])
+log = logging.getLogger(__name__)
 
 TRANSITIONS: dict[POStatus, set[POStatus]] = {
     POStatus.DRAFT: {POStatus.SUBMITTED},
@@ -31,15 +34,19 @@ def list_orders(store: StoreDep):
     "",
     response_model=PurchaseOrder,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[RequireAdmin],
 )
-def create_order(data: PurchaseOrderCreate, store: StoreDep):
+def create_order(data: PurchaseOrderCreate, store: StoreDep, user: User = RequireOrderCreate):
     supplier = store.suppliers.get(data.supplier_id)
     if not supplier:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Supplier does not exist")
     if supplier.blocked:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Supplier is blocked")
-    return store.add_order(data)
+    order = store.add_order(data)
+    log.info(
+        "purchase order created",
+        extra={"order_id": order.id, "supplier_id": order.supplier_id, "user": user.name},
+    )
+    return order
 
 
 @router.get("/{order_id}", response_model=PurchaseOrder, dependencies=[RequireViewer])

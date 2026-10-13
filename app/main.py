@@ -11,7 +11,7 @@ from app.routers import conversion, purchase_orders, suppliers
 setup_logging()
 access_log = logging.getLogger("procurement.access")
 
-app = FastAPI(title="procurement-ops-lab", version="0.5.0")
+app = FastAPI(title="procurement-ops-lab", version="0.6.0")
 app.include_router(suppliers.router)
 app.include_router(purchase_orders.router)
 app.include_router(conversion.router)

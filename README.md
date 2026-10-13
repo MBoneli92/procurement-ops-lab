@@ -141,7 +141,7 @@ LEARNING_LOG.md       Daily log: what was built, what broke and how it was fixed
 - **Python instead of CAP.** CAP only supports Node.js and Java. Python runs on Cloud Foundry through the Python buildpack, fits into an MTA as a `python` module and validates XSUAA tokens with `sap-xssec`.
 - **MTA instead of `cf push`.** App and service dependencies ship together, the same package can be promoted across environments without rebuilding, and Cloud Transport Management can transport it.
 - **In-memory storage, on purpose.** Scaling to two instances shows each instance with different data, a hands-on example of why cloud apps must be stateless. A managed database (SAP HANA Cloud or PostgreSQL) is the production answer.
-- **Least privilege everywhere.** Read-only `GITHUB_TOKEN` in CI, a repository-scoped read-only token for the SAP CI/CD service, and a technical client that only gets the Viewer scope.
+- **Least privilege everywhere.** Read-only `GITHUB_TOKEN` in CI, a repository-scoped read-only token for the SAP CI/CD service, and technical clients that only get the scopes they need (Viewer, plus OrderIntake for the integration: it can create purchase orders but not approve them).
 
 ## SAP BTP trial limitations
 
@@ -163,7 +163,8 @@ LEARNING_LOG.md       Daily log: what was built, what broke and how it was fixed
 - [X] Jenkins with Project Piper
 - [x] Promotion from DEV to PROD with SAP Cloud Transport Management
 - [x] Structured logging, Alert Notification, scheduled health checks
-- [x] SAP Integration Suite: cXML purchase order flow (Ariba style) and API Management
+- [x] SAP Integration Suite: cXML purchase order flow (Ariba style), see [integration/](integration/README.md)
+- [ ] API Management in front of the flow (auth and rate limit)
 - [x] Runbook, postmortem and architecture decision records
 
 

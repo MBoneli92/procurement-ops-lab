@@ -12,7 +12,16 @@ from datetime import UTC, datetime
 
 # Fields a log call may pass with extra={...}; anything else is ignored on purpose,
 # so nobody logs a token or a whole request body by accident.
-EXTRA_FIELDS = ("request_id", "method", "path", "status", "duration_ms", "user")
+EXTRA_FIELDS = (
+    "request_id",
+    "method",
+    "path",
+    "status",
+    "duration_ms",
+    "user",
+    "order_id",
+    "supplier_id",
+)
 
 
 class JsonFormatter(logging.Formatter):
