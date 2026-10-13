@@ -29,14 +29,16 @@ The technical client of `procurement-xsuaa` gets only `Viewer` and `OrderIntake`
 
 ## iFlow `ariba-order-to-procurement-api`
 
-Package `procurement-ops-lab`. The scripts are versioned in `scripts/`; the exported iFlow lives in `iflow/` after each change.
+Package `procurement-ops-lab`. The iFlow is versioned in [`iflow/`](iflow/ariba-order-to-procurement-api) with the Git Push of Cloud Integration (Settings > Integrations > Git Access), on a feature branch and through a pull request like any other change. The tenant is the place where the iFlow is edited; the repository is its history.
+
+In `iflow/`, the `.iflw` file is the flow itself (BPMN XML), and `src/main/resources/script/` holds the two Groovy scripts.
 
 | Step | Type | Configuration |
 |---|---|---|
 | Sender | HTTPS adapter | Address `/ariba/orders`, Authorization `User Role`, role `ESBMessaging.send`, CSRF Protected off |
-| Map cXML to JSON | Groovy Script | `scripts/cxml_to_purchase_order.groovy` |
+| Map cXML to JSON | Groovy Script | `iflow/ariba-order-to-procurement-api/src/main/resources/script/script1.groovy` |
 | Call procurement-api | Request Reply + HTTP receiver | Address `https://<dev route>/purchase-orders`, Method `POST`, Authentication `OAuth2 Client Credentials`, Credential Name `procurement-api-oauth`, Request Headers `Content-Type`, Throw Exception on Failure on |
-| Build cXML Response | Groovy Script | `scripts/purchase_order_to_cxml_response.groovy` (also forces HTTP 200, since cXML expects 200 even when the API answers 201) |
+| Build cXML Response | Groovy Script | `iflow/ariba-order-to-procurement-api/src/main/resources/script/script2.groovy` (also forces HTTP 200, since cXML expects 200 even when the API answers 201) |
 
 Field mapping:
 

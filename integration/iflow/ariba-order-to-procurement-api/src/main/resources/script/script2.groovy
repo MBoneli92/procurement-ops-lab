@@ -10,7 +10,6 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 def Message processData(Message message) {
-    // Stream the body into the parser instead of copying it into a String first.
     Reader body = message.getBody(java.io.Reader)
     def order = new JsonSlurper().parse(body)
     String aribaOrderId = message.getProperty("AribaOrderID") ?: ""
@@ -27,8 +26,6 @@ def Message processData(Message message) {
     String text = "Ariba order " + aribaOrderId + " created as purchase order " + order.id +
         " with status " + order.status
     message.setHeader("Content-Type", "text/xml")
-    // The API answered 201 Created and Camel would pass that code back to the sender.
-    // cXML says the HTTP status of a successful reply is 200, with the result in <Status>.
     message.setHeader("CamelHttpResponseCode", 200)
     message.setBody(
         '<?xml version="1.0" encoding="UTF-8"?>\n' +

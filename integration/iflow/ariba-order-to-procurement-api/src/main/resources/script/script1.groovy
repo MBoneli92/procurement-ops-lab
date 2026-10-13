@@ -67,7 +67,6 @@ def Message processData(Message message) {
         messageLogFactory.getMessageLog(message)?.addCustomHeaderProperty("AribaOrderID", orderId)
     } catch (MissingPropertyException ignored) {
     }
-
     message.setHeader("Content-Type", "application/json")
     message.setBody(JsonOutput.toJson([
         supplier_id: supplierId as Integer,
