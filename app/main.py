@@ -1,16 +1,50 @@
 import logging
+import time
+import uuid
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from app.auth import CurrentUser
+from app.logging_config import setup_logging
 from app.routers import conversion, purchase_orders, suppliers
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+setup_logging()
+access_log = logging.getLogger("procurement.access")
 
-app = FastAPI(title="procurement-ops-lab", version="0.4.0")
+app = FastAPI(title="procurement-ops-lab", version="0.5.0")
 app.include_router(suppliers.router)
 app.include_router(purchase_orders.router)
 app.include_router(conversion.router)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """One JSON line per request, tagged with a request id.
+
+    The Cloud Foundry router already sends X-Vcap-Request-Id; reusing it links our log line to the
+    router's RTR line in `cf logs`. Locally there is no router, so we generate one.
+    """
+    request_id = (
+        request.headers.get("x-request-id")
+        or request.headers.get("x-vcap-request-id")
+        or str(uuid.uuid4())
+    )
+    started = time.perf_counter()
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    status = response.status_code
+    access_log.log(
+        logging.WARNING if status >= 500 else logging.INFO,
+        "request",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status": status,
+            "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+        },
+    )
+    return response
 
 
 @app.get("/health", tags=["ops"])
