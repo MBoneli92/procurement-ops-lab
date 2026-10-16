@@ -11,6 +11,7 @@ modules:
       memory: 256M
       disk-quota: 512M
       buildpack: python_buildpack
+      stack: cflinuxfs5
       command: uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log
       health-check-type: http
       health-check-http-endpoint: /health
